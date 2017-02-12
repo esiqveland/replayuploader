@@ -4,9 +4,10 @@ import (
 	"flag"
 	"log"
 	"os"
-	"github.com/fsnotify/fsnotify"
-	"github.com/esiqveland/replayuploader"
 	"path/filepath"
+
+	"github.com/esiqveland/replayuploader"
+	"github.com/fsnotify/fsnotify"
 )
 
 var dirFlag = flag.String("dir", "", "Directory where replays show up.")
@@ -16,9 +17,9 @@ var hashFlag = flag.String("hash", "", "Hash value to use when uploading.")
 func main() {
 	flag.Parse()
 	cfg := replayuploader.Config{
-		Dir: *dirFlag,
+		Dir:   *dirFlag,
 		Token: *tokenFlag,
-		Hash: *hashFlag,
+		Hash:  *hashFlag,
 	}
 
 	err := cfg.HasError()
@@ -48,7 +49,7 @@ func run(cfg replayuploader.Config) int {
 			select {
 			case event := <-watcher.Events:
 				log.Println("event:", event)
-				if event.Op & fsnotify.Write == fsnotify.Write {
+				if event.Op&fsnotify.Write == fsnotify.Write {
 					log.Println("Wrote file:", event.Name)
 					relPath, err := filepath.Rel(cfg.Dir, event.Name)
 					if err != nil {
@@ -68,13 +69,12 @@ func run(cfg replayuploader.Config) int {
 		}
 	}()
 
-
 	err = watcher.Add(cfg.Dir)
 	if err != nil {
 		log.Printf("Error watching dir '%v': %v", cfg.Dir, err)
 		return -1
 	}
 
-	<- done
+	<-done
 	return 0
 }

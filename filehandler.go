@@ -2,10 +2,10 @@ package replayuploader
 
 import (
 	"errors"
-	"path/filepath"
-	"time"
 	"log"
 	"os"
+	"path/filepath"
+	"time"
 )
 
 type Config struct {
@@ -26,7 +26,6 @@ func (c *Config) HasError() error {
 	}
 	return nil
 }
-
 
 type FileHandler interface {
 	// NewFile takes a path relative to config.dir
@@ -52,23 +51,31 @@ func (fh *fileHandler) NewFile(relPath string) error {
 	if err != nil {
 		return err
 	}
-	logfile(fd)
-	err = fh.uploader.Upload(relPath, fd)
-	if err != nil {
-		return err
+	defer fd.Close()
+
+	if shouldUpload(fd) {
+		err = fh.uploader.Upload(relPath, fd)
+		if err != nil {
+			return err
+		}
+	} else {
+		log.Printf("skipping file: %v", relPath)
 	}
+
 	return nil
 }
 
-func logfile(file *os.File) {
+func shouldUpload(file *os.File) bool {
 	stat, _ := file.Stat()
-	log.Printf("[%v] %vbytes", file.Name(), stat.Size())
+	size := stat.Size()
+
+	log.Printf("[%v] %vbytes", file.Name(), size)
+	return size > 0
 }
 
 func CreateFileHandler(config Config, uploader Uploader) FileHandler {
 	return &fileHandler{
-		config: config,
+		config:   config,
 		uploader: uploader,
 	}
 }
-
