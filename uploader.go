@@ -25,7 +25,7 @@ func (u *uploader) Upload(filename string, content io.Reader) error {
 
 	mpWriter := multipart.NewWriter(body)
 	mpWriter.WriteField("hashkey", u.config.Hash)
-	mpWriter.WriteField("hashkey", u.config.Token)
+	mpWriter.WriteField("token", u.config.Token)
 	mpWriter.WriteField("timestamp", fmt.Sprintf("%v", time.Now().Unix()))
 	part, err := mpWriter.CreateFormFile("Filedata", filename)
 	if err != nil {

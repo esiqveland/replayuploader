@@ -6,6 +6,10 @@ import (
 	"os"
 	"path/filepath"
 	"time"
+	"sync"
+	"crypto/sha512"
+	"io"
+	"encoding/base64"
 )
 
 type Config struct {
@@ -35,6 +39,8 @@ type FileHandler interface {
 type fileHandler struct {
 	config   Config
 	uploader Uploader
+	memoize  map[string]string
+	lock     sync.RWMutex
 }
 
 func (fh *fileHandler) NewFile(relPath string) error {
@@ -53,7 +59,7 @@ func (fh *fileHandler) NewFile(relPath string) error {
 	}
 	defer fd.Close()
 
-	if shouldUpload(fd) {
+	if fh.shouldUpload(fd) {
 		err = fh.uploader.Upload(relPath, fd)
 		if err != nil {
 			return err
@@ -65,17 +71,42 @@ func (fh *fileHandler) NewFile(relPath string) error {
 	return nil
 }
 
-func shouldUpload(file *os.File) bool {
+func (fh *fileHandler) shouldUpload(file *os.File) bool {
+	fh.lock.Lock()
+	defer fh.lock.Unlock()
+
+	hash := sha512.New()
 	stat, _ := file.Stat()
 	size := stat.Size()
 
-	log.Printf("[%v] %vbytes", file.Name(), size)
-	return size > 0
+	// make sure we reset file reader for other clients
+	defer file.Seek(0, 0)
+
+	_, err := io.Copy(hash, file)
+	if err != nil {
+		log.Printf("error hashing file=%v", file.Name())
+		return false
+	}
+	data := hash.Sum(nil)
+	shaSum := base64.StdEncoding.EncodeToString(data)
+
+	log.Printf("[%v] %v %vbytes", file.Name(), shaSum, size)
+
+	_, ok := fh.memoize[shaSum]
+	if ok {
+		log.Printf("Skipping file=%v we have seen this before", file.Name())
+		return false
+	} else {
+		fh.memoize[shaSum] = file.Name()
+		return size > 0
+	}
 }
 
 func CreateFileHandler(config Config, uploader Uploader) FileHandler {
 	return &fileHandler{
 		config:   config,
 		uploader: uploader,
+		memoize:  make(map[string]string),
+		lock:     sync.RWMutex{},
 	}
 }
