@@ -1,15 +1,15 @@
 package replayuploader
 
 import (
+	"crypto/sha512"
+	"encoding/base64"
 	"errors"
+	"io"
 	"log"
 	"os"
 	"path/filepath"
-	"time"
 	"sync"
-	"crypto/sha512"
-	"io"
-	"encoding/base64"
+	"time"
 )
 
 type Config struct {
