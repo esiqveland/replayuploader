@@ -16,4 +16,8 @@ go run cmd/main.go -dir "/absolute/path/to/replay/dir/" -token "mysc2replaytoken
 ```
 or use `go get`.
 
+# TODO
+
+- [ ] tests
+- [ ] remember which files we have seen before between runs (basically store our list of things we've seen before and load it again)
 
