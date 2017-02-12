@@ -9,6 +9,7 @@ import (
 	"mime/multipart"
 	"net/http"
 	"time"
+	"io/ioutil"
 )
 
 type Uploader interface {
@@ -58,6 +59,12 @@ func (u *uploader) Upload(filename string, content io.Reader) error {
 	defer res.Body.Close()
 
 	log.Printf("[%v %v] %v", req.Method, url, res.Status)
+
+	resBody, err := ioutil.ReadAll(res.Body)
+	if err != nil {
+		log.Printf("Error reading response body: %v", err)
+	}
+	log.Printf("Response: %v", string(resBody))
 
 	if res.StatusCode == 200 || res.StatusCode == 201 || res.StatusCode == 204 {
 		return nil

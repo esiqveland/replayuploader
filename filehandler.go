@@ -44,13 +44,24 @@ type fileHandler struct {
 }
 
 func (fh *fileHandler) NewFile(relPath string) error {
+	// Do a small sleep to make sure sc2 has finished fully writing this file
+	// before trying to reading it.
+	// Usually when running SC2 through WINE, I see at least 3 writes to a replay file after a game,
+	// some of which are partial writes of the file.
+	// This should make sure we see the entire file on first read.
+	time.Sleep(1*time.Second)
+
+	return fh.handle(relPath)
+}
+
+
+func (fh *fileHandler) handle(relPath string) error {
 	absPath := filepath.Join(fh.config.Dir, relPath)
 	start := time.Now()
-	log.Printf("NewFile=%v", relPath)
 
 	defer func() {
 		elapsed := time.Now().Unix() - start.Unix()
-		log.Printf("NewFile=%v took %vms", relPath, elapsed)
+		log.Printf("File=%v took %vms", relPath, elapsed)
 	}()
 
 	fd, err := os.Open(absPath)
@@ -70,6 +81,7 @@ func (fh *fileHandler) NewFile(relPath string) error {
 
 	return nil
 }
+
 
 // shouldUpload returns false if we should not upload this file.
 // e.g. if this is a zero-length file or we have seen this file before.
