@@ -42,15 +42,16 @@ func run(cfg replayuploader.Config) int {
 	}
 	defer watcher.Close()
 
+
 	done := make(chan bool)
 
 	go func() {
 		for {
 			select {
 			case event := <-watcher.Events:
-				log.Println("event:", event)
+				//log.Println("event:", event)
 				if event.Op&fsnotify.Write == fsnotify.Write {
-					log.Println("Wrote file:", event.Name)
+					//log.Println("Wrote file:", event.Name)
 					relPath, err := filepath.Rel(cfg.Dir, event.Name)
 					if err != nil {
 						log.Printf("error getting relative path for name: %v", event.Name)
@@ -60,7 +61,7 @@ func run(cfg replayuploader.Config) int {
 					if handlerErr != nil {
 						log.Printf("Error handling file=%v: %v", event.Name, handlerErr)
 					} else {
-						log.Printf("Handled file successfully: %v", event.Name)
+						log.Printf("Handled file successfully: %v", relPath)
 					}
 				}
 			case err := <-watcher.Errors:
@@ -73,8 +74,9 @@ func run(cfg replayuploader.Config) int {
 	if err != nil {
 		log.Printf("Error watching dir '%v': %v", cfg.Dir, err)
 		return -1
+	} else {
+		log.Printf("Now watching directory: %v", cfg.Dir)
 	}
-
 	<-done
 	return 0
 }

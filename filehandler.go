@@ -71,6 +71,8 @@ func (fh *fileHandler) NewFile(relPath string) error {
 	return nil
 }
 
+// shouldUpload returns false if we should not upload this file.
+// e.g. if this is a zero-length file or we have seen this file before.
 func (fh *fileHandler) shouldUpload(file *os.File) bool {
 	fh.lock.Lock()
 	defer fh.lock.Unlock()
@@ -84,7 +86,7 @@ func (fh *fileHandler) shouldUpload(file *os.File) bool {
 
 	_, err := io.Copy(hash, file)
 	if err != nil {
-		log.Printf("error hashing file=%v", file.Name())
+		log.Printf("error hashing file=%v", file.Name(), err)
 		return false
 	}
 	data := hash.Sum(nil)
