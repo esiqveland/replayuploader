@@ -26,6 +26,7 @@ func (u *uploader) Upload(filename string, content io.Reader) error {
 	mpWriter := multipart.NewWriter(body)
 	mpWriter.WriteField("hashkey", u.config.Hash)
 	mpWriter.WriteField("token", u.config.Token)
+	mpWriter.WriteField("upload_method", "linux_uploader")
 	mpWriter.WriteField("timestamp", fmt.Sprintf("%v", time.Now().Unix()))
 	part, err := mpWriter.CreateFormFile("Filedata", filename)
 	if err != nil {
@@ -40,7 +41,7 @@ func (u *uploader) Upload(filename string, content io.Reader) error {
 		return err
 	}
 
-	url := "https://sc2replaystats.com/upload_replay.php"
+	url := "https://sc2replaystats.com/api/v2/uploadReplay"
 
 	req, err := http.NewRequest("POST", url, body)
 	if err != nil {
