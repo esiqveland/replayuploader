@@ -77,8 +77,38 @@ func New(config Config) Uploader {
 	client := &http.Client{
 		Timeout: time.Second * 5,
 	}
-	return &uploader{
+	upl := &uploader{
 		config: config,
 		client: client,
 	}
+	return &retryingUploader{
+		uploader: upl,
+		maxTries: config.MaxTries,
+		backoffSeconds: 15,
+	}
+}
+
+type retryingUploader struct {
+	maxTries       int
+	backoffSeconds int
+	uploader       Uploader
+}
+
+func (u *retryingUploader) Upload(filename string, content io.Reader) error {
+	var err error
+
+	for tries := 0; tries < u.maxTries; tries++ {
+		err = u.uploader.Upload(filename, content)
+		if err != nil {
+			sleepTime := time.Duration(tries * u.backoffSeconds) * time.Second
+			log.Printf("[%v] Upload of replay='%v' failed: %v", tries, filename, err)
+			log.Printf("[%v] Retrying in %vs", tries, sleepTime.Seconds())
+			time.Sleep(sleepTime)
+			continue
+		} else {
+			return nil
+		}
+	}
+
+	return err
 }

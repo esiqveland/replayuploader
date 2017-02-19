@@ -13,6 +13,7 @@ import (
 var dirFlag = flag.String("dir", "", "Directory where replays show up.")
 var tokenFlag = flag.String("token", "", "Token to use when uploading.")
 var hashFlag = flag.String("hash", "", "Hash value to use when uploading.")
+var triesFlag = flag.Int("maxtries", 5, "Max number of retries to upload a replay.")
 
 func main() {
 	flag.Parse()
@@ -20,6 +21,7 @@ func main() {
 		Dir:   *dirFlag,
 		Token: *tokenFlag,
 		Hash:  *hashFlag,
+		MaxTries: *triesFlag,
 	}
 
 	err := cfg.HasError()
@@ -42,16 +44,14 @@ func run(cfg replayuploader.Config) int {
 	}
 	defer watcher.Close()
 
-
 	done := make(chan bool)
 
 	go func() {
 		for {
 			select {
 			case event := <-watcher.Events:
-				//log.Println("event:", event)
-				if event.Op&fsnotify.Write == fsnotify.Write {
-					//log.Println("Wrote file:", event.Name)
+			//log.Println("event:", event)
+				if event.Op & fsnotify.Write == fsnotify.Write {
 					relPath, err := filepath.Rel(cfg.Dir, event.Name)
 					if err != nil {
 						log.Printf("error getting relative path for name: %v", event.Name)

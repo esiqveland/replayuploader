@@ -13,9 +13,10 @@ import (
 )
 
 type Config struct {
-	Dir   string
-	Token string
-	Hash  string
+	Dir      string
+	Token    string
+	Hash     string
+	MaxTries int
 }
 
 func (c *Config) HasError() error {
@@ -28,6 +29,9 @@ func (c *Config) HasError() error {
 	if c.Hash == "" {
 		return errors.New("hash is empty")
 	}
+	if c.MaxTries <= 0 {
+		return errors.New("MaxTries must be >0")
+	}
 	return nil
 }
 
@@ -37,10 +41,10 @@ type FileHandler interface {
 }
 
 type fileHandler struct {
-	config   Config
-	uploader Uploader
-	memoize  map[string]string
-	lock     sync.RWMutex
+	config    Config
+	uploader  Uploader
+	filesDone map[string]bool
+	lock      sync.RWMutex
 }
 
 func (fh *fileHandler) NewFile(relPath string) error {
@@ -49,19 +53,18 @@ func (fh *fileHandler) NewFile(relPath string) error {
 	// Usually when running SC2 through WINE, I see at least 3 writes to a replay file after a game,
 	// some of which are partial writes of the file.
 	// This should make sure we see the entire file on first read.
-	time.Sleep(1*time.Second)
+	time.Sleep(1 * time.Second)
 
 	return fh.handle(relPath)
 }
-
 
 func (fh *fileHandler) handle(relPath string) error {
 	absPath := filepath.Join(fh.config.Dir, relPath)
 	start := time.Now()
 
 	defer func() {
-		elapsed := time.Now().Unix() - start.Unix()
-		log.Printf("File=%v took %vms", relPath, elapsed)
+		elapsed := time.Since(start)
+		log.Printf("File=%v took %v", relPath, elapsed)
 	}()
 
 	fd, err := os.Open(absPath)
@@ -70,48 +73,53 @@ func (fh *fileHandler) handle(relPath string) error {
 	}
 	defer fd.Close()
 
-	if fh.shouldUpload(fd) {
+	hasher := sha512.New()
+	// make sure we reset file reader for other clients
+	fd.Seek(0, 0)
+
+	_, err = io.Copy(hasher, fd)
+	if err != nil {
+		log.Printf("error hashing file=%v: %v", fd.Name(), err)
+		return err
+	}
+	data := hasher.Sum(nil)
+	shaSum := base64.StdEncoding.EncodeToString(data)
+
+	if fh.shouldUpload(shaSum, fd) {
 		err = fh.uploader.Upload(relPath, fd)
 		if err != nil {
 			return err
+		} else {
+			fh.markCompleted(shaSum)
 		}
 	} else {
-		log.Printf("skipping file: %v", relPath)
+		log.Printf("Skipping file=%v because we have uploaded this before.", fd.Name())
 	}
 
 	return nil
 }
 
-
-// shouldUpload returns false if we should not upload this file.
-// e.g. if this is a zero-length file or we have seen this file before.
-func (fh *fileHandler) shouldUpload(file *os.File) bool {
+func (fh *fileHandler) markCompleted(shaSum string) {
 	fh.lock.Lock()
 	defer fh.lock.Unlock()
 
-	hash := sha512.New()
+	fh.filesDone[shaSum] = true
+}
+
+// shouldUpload returns false if we should not upload this file.
+// e.g. if this is a zero-length file or we have seen this file before.
+func (fh *fileHandler) shouldUpload(shaSum string, file *os.File) bool {
+	fh.lock.Lock()
+	defer fh.lock.Unlock()
+
 	stat, _ := file.Stat()
 	size := stat.Size()
 
-	// make sure we reset file reader for other clients
-	defer file.Seek(0, 0)
-
-	_, err := io.Copy(hash, file)
-	if err != nil {
-		log.Printf("error hashing file=%v", file.Name(), err)
-		return false
-	}
-	data := hash.Sum(nil)
-	shaSum := base64.StdEncoding.EncodeToString(data)
-
-	log.Printf("[%v] %v %vbytes", file.Name(), shaSum, size)
-
-	_, ok := fh.memoize[shaSum]
-	if ok {
-		log.Printf("Skipping file=%v we have seen this before", file.Name())
+	isDone, ok := fh.filesDone[shaSum]
+	if ok && isDone {
 		return false
 	} else {
-		fh.memoize[shaSum] = file.Name()
+		fh.filesDone[shaSum] = false
 		return size > 0
 	}
 }
@@ -120,7 +128,7 @@ func CreateFileHandler(config Config, uploader Uploader) FileHandler {
 	return &fileHandler{
 		config:   config,
 		uploader: uploader,
-		memoize:  make(map[string]string),
+		filesDone:  make(map[string]bool),
 		lock:     sync.RWMutex{},
 	}
 }

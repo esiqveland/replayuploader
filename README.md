@@ -20,4 +20,6 @@ or use `go get`.
 
 - [ ] tests
 - [ ] remember which files we have seen before between runs (basically store our list of things we've seen before and load it again)
+- [X] only remember the files that have been successfully uploaded. right now it does not care if the upload call failed.
+- [X] retry upload with backoff if it fails
 
