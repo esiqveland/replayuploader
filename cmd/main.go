@@ -1,12 +1,12 @@
 package main
 
 import (
+	"encoding/json"
 	"flag"
 	"log"
 	"os"
 	"path/filepath"
 
-	"encoding/json"
 	"github.com/esiqveland/replayuploader"
 	"github.com/fsnotify/fsnotify"
 )
@@ -15,7 +15,7 @@ var dirFlag = flag.String("dir", "", "Directory where replays show up.")
 var tokenFlag = flag.String("token", "", "Token to use when uploading.")
 var hashFlag = flag.String("hash", "", "Hash value to use when uploading.")
 var triesFlag = flag.Int("maxtries", 5, "Max number of retries to upload a replay.")
-var dataFlag = flag.String("data", "data.json", "Filename to store data between runs.")
+var dataFlag = flag.String("data", "state.json", "Filename to store data between runs.")
 
 func main() {
 	flag.Parse()
@@ -38,17 +38,21 @@ func main() {
 
 func run(cfg replayuploader.Config) int {
 	upl := replayuploader.New(cfg)
+
 	fd, err := os.Open(cfg.DataFile)
 	if err != nil {
 		log.Printf("Error opening datafile: %v", err)
+	} else {
+		defer fd.Close()
 	}
-	dataFile := replayuploader.DataFile{
+	dataFile := replayuploader.StateFile{
 		Status: make(map[string]bool),
 	}
 	err = json.NewDecoder(fd).Decode(&dataFile)
 	if err != nil {
-		log.Printf("Error with datafile: %v", err)
+		log.Printf("Error with statefile: %v", err)
 	}
+
 	fHandler := replayuploader.CreateFileHandler(cfg, upl, dataFile)
 
 	watcher, err := fsnotify.NewWatcher()

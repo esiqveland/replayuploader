@@ -13,8 +13,8 @@ import (
 	"time"
 )
 
-// Datafile stores data between runs
-type DataFile struct {
+// StateFile stores data between runs
+type StateFile struct {
 	// Status holds results of replays we have seen
 	// Format is Checksum -> success
 	Status map[string]bool `json:"status"`
@@ -24,7 +24,7 @@ type Config struct {
 	Dir   string
 	Token string
 	Hash  string
-	// Path to datafile
+	// Path to statefile
 	DataFile string
 	MaxTries int
 }
@@ -55,7 +55,7 @@ type FileHandler interface {
 
 type fileHandler struct {
 	config    Config
-	state     DataFile
+	state     StateFile
 	uploader  Uploader
 	filesDone map[string]bool
 	lock      sync.RWMutex
@@ -126,7 +126,7 @@ func (fh *fileHandler) markCompleted(shaSum string) {
 	}
 	defer fd.Close()
 
-	data := DataFile{
+	data := StateFile{
 		Status: fh.filesDone,
 	}
 
@@ -154,7 +154,7 @@ func (fh *fileHandler) shouldUpload(shaSum string, file *os.File) bool {
 	}
 }
 
-func CreateFileHandler(config Config, uploader Uploader, data DataFile) FileHandler {
+func CreateFileHandler(config Config, uploader Uploader, data StateFile) FileHandler {
 	log.Printf("Loaded %v files done.", len(data.Status))
 	return &fileHandler{
 		config:    config,
