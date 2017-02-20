@@ -5,11 +5,11 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"io/ioutil"
 	"log"
 	"mime/multipart"
 	"net/http"
 	"time"
-	"io/ioutil"
 )
 
 type Uploader interface {
@@ -82,8 +82,8 @@ func New(config Config) Uploader {
 		client: client,
 	}
 	return &retryingUploader{
-		uploader: upl,
-		maxTries: config.MaxTries,
+		uploader:       upl,
+		maxTries:       config.MaxTries,
 		backoffSeconds: 15,
 	}
 }
@@ -100,7 +100,7 @@ func (u *retryingUploader) Upload(filename string, content io.Reader) error {
 	for tries := 0; tries < u.maxTries; tries++ {
 		err = u.uploader.Upload(filename, content)
 		if err != nil {
-			sleepTime := time.Duration(tries * u.backoffSeconds) * time.Second
+			sleepTime := time.Duration(tries*u.backoffSeconds) * time.Second
 			log.Printf("[%v] Upload of replay='%v' failed: %v", tries, filename, err)
 			log.Printf("[%v] Retrying in %vs", tries, sleepTime.Seconds())
 			time.Sleep(sleepTime)

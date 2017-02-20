@@ -6,6 +6,7 @@ import (
 	"os"
 	"path/filepath"
 
+	"encoding/json"
 	"github.com/esiqveland/replayuploader"
 	"github.com/fsnotify/fsnotify"
 )
@@ -14,14 +15,16 @@ var dirFlag = flag.String("dir", "", "Directory where replays show up.")
 var tokenFlag = flag.String("token", "", "Token to use when uploading.")
 var hashFlag = flag.String("hash", "", "Hash value to use when uploading.")
 var triesFlag = flag.Int("maxtries", 5, "Max number of retries to upload a replay.")
+var dataFlag = flag.String("data", "data.json", "Filename to store data between runs.")
 
 func main() {
 	flag.Parse()
 	cfg := replayuploader.Config{
-		Dir:   *dirFlag,
-		Token: *tokenFlag,
-		Hash:  *hashFlag,
+		Dir:      *dirFlag,
+		Token:    *tokenFlag,
+		Hash:     *hashFlag,
 		MaxTries: *triesFlag,
+		DataFile: *dataFlag,
 	}
 
 	err := cfg.HasError()
@@ -35,7 +38,18 @@ func main() {
 
 func run(cfg replayuploader.Config) int {
 	upl := replayuploader.New(cfg)
-	fHandler := replayuploader.CreateFileHandler(cfg, upl)
+	fd, err := os.Open(cfg.DataFile)
+	if err != nil {
+		log.Printf("Error opening datafile: %v", err)
+	}
+	dataFile := replayuploader.DataFile{
+		Status: make(map[string]bool),
+	}
+	err = json.NewDecoder(fd).Decode(&dataFile)
+	if err != nil {
+		log.Printf("Error with datafile: %v", err)
+	}
+	fHandler := replayuploader.CreateFileHandler(cfg, upl, dataFile)
 
 	watcher, err := fsnotify.NewWatcher()
 	if err != nil {
@@ -50,8 +64,8 @@ func run(cfg replayuploader.Config) int {
 		for {
 			select {
 			case event := <-watcher.Events:
-			//log.Println("event:", event)
-				if event.Op & fsnotify.Write == fsnotify.Write {
+				//log.Println("event:", event)
+				if event.Op&fsnotify.Write == fsnotify.Write {
 					relPath, err := filepath.Rel(cfg.Dir, event.Name)
 					if err != nil {
 						log.Printf("error getting relative path for name: %v", event.Name)

@@ -3,6 +3,7 @@ package replayuploader
 import (
 	"crypto/sha512"
 	"encoding/base64"
+	"encoding/json"
 	"errors"
 	"io"
 	"log"
@@ -12,10 +13,19 @@ import (
 	"time"
 )
 
+// Datafile stores data between runs
+type DataFile struct {
+	// Status holds results of replays we have seen
+	// Format is Checksum -> success
+	Status map[string]bool `json:"status"`
+}
+
 type Config struct {
-	Dir      string
-	Token    string
-	Hash     string
+	Dir   string
+	Token string
+	Hash  string
+	// Path to datafile
+	DataFile string
 	MaxTries int
 }
 
@@ -32,6 +42,9 @@ func (c *Config) HasError() error {
 	if c.MaxTries <= 0 {
 		return errors.New("MaxTries must be >0")
 	}
+	if c.DataFile == "" {
+		return errors.New("DataFile is empty")
+	}
 	return nil
 }
 
@@ -42,6 +55,7 @@ type FileHandler interface {
 
 type fileHandler struct {
 	config    Config
+	state     DataFile
 	uploader  Uploader
 	filesDone map[string]bool
 	lock      sync.RWMutex
@@ -104,6 +118,22 @@ func (fh *fileHandler) markCompleted(shaSum string) {
 	defer fh.lock.Unlock()
 
 	fh.filesDone[shaSum] = true
+
+	fd, err := os.Create(fh.config.DataFile)
+	if err != nil {
+		log.Printf("Error opening data file for saving progress: %v", err)
+		return
+	}
+	defer fd.Close()
+
+	data := DataFile{
+		Status: fh.filesDone,
+	}
+
+	err = json.NewEncoder(fd).Encode(&data)
+	if err != nil {
+		log.Printf("Error marshalling status file: %v", err)
+	}
 }
 
 // shouldUpload returns false if we should not upload this file.
@@ -124,11 +154,13 @@ func (fh *fileHandler) shouldUpload(shaSum string, file *os.File) bool {
 	}
 }
 
-func CreateFileHandler(config Config, uploader Uploader) FileHandler {
+func CreateFileHandler(config Config, uploader Uploader, data DataFile) FileHandler {
+	log.Printf("Loaded %v files done.", len(data.Status))
 	return &fileHandler{
-		config:   config,
-		uploader: uploader,
-		filesDone:  make(map[string]bool),
-		lock:     sync.RWMutex{},
+		config:    config,
+		state:     data,
+		uploader:  uploader,
+		filesDone: data.Status,
+		lock:      sync.RWMutex{},
 	}
 }
