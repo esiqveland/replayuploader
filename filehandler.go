@@ -88,14 +88,15 @@ func (fh *fileHandler) handle(relPath string) error {
 	defer fd.Close()
 
 	hasher := sha512.New()
-	// make sure we reset file reader for other clients
-	fd.Seek(0, 0)
 
 	_, err = io.Copy(hasher, fd)
 	if err != nil {
 		log.Printf("error hashing file=%v: %v", fd.Name(), err)
 		return err
 	}
+	// make sure we reset file reader for other clients
+	fd.Seek(0, 0)
+
 	data := hasher.Sum(nil)
 	shaSum := base64.StdEncoding.EncodeToString(data)
 
