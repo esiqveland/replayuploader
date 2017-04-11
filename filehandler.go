@@ -9,6 +9,7 @@ import (
 	"log"
 	"os"
 	"path/filepath"
+	"strings"
 	"sync"
 	"time"
 )
@@ -49,7 +50,7 @@ func (c *Config) HasError() error {
 }
 
 type FileHandler interface {
-	// NewFile takes a path relative to config.dir
+	// NewFile takes a path relative to config.Dir
 	NewFile(relPath string) error
 }
 
@@ -142,6 +143,11 @@ func (fh *fileHandler) markCompleted(shaSum string) {
 func (fh *fileHandler) shouldUpload(shaSum string, file *os.File) bool {
 	fh.lock.Lock()
 	defer fh.lock.Unlock()
+
+	fileName := file.Name()
+	if !strings.Contains(strings.ToLower(fileName), ".sc2replay") {
+		return false
+	}
 
 	stat, _ := file.Stat()
 	size := stat.Size()

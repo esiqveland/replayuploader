@@ -7,6 +7,10 @@ import (
 	"os"
 	"path/filepath"
 
+	"io/ioutil"
+
+	"fmt"
+
 	"github.com/esiqveland/replayuploader"
 	"github.com/fsnotify/fsnotify"
 )
@@ -15,10 +19,20 @@ var dirFlag = flag.String("dir", "", "Directory where replays show up.")
 var tokenFlag = flag.String("token", "", "Token to use when uploading.")
 var hashFlag = flag.String("hash", "", "Hash value to use when uploading.")
 var triesFlag = flag.Int("maxtries", 5, "Max number of retries to upload a replay.")
-var dataFlag = flag.String("data", "state.json", "Filename to store data between runs.")
+var dataFlag = flag.String("data", "state.json", "Filepath to store state between runs.")
+var versionFlag = flag.Bool("version", false, "Prints version and exits.")
+
+// version is set by goreleaser with an ldflag main.version
+var version = "master"
 
 func main() {
 	flag.Parse()
+
+	if *versionFlag {
+		fmt.Printf("version: %v\n", version)
+		os.Exit(0)
+	}
+
 	cfg := replayuploader.Config{
 		Dir:      *dirFlag,
 		Token:    *tokenFlag,
@@ -26,7 +40,6 @@ func main() {
 		MaxTries: *triesFlag,
 		DataFile: *dataFlag,
 	}
-
 	err := cfg.HasError()
 	if err != nil {
 		log.Printf("Error with config: %v ", err)
@@ -55,6 +68,27 @@ func run(cfg replayuploader.Config) int {
 
 	fHandler := replayuploader.CreateFileHandler(cfg, upl, dataFile)
 
+	go fileUploader(cfg, fHandler)
+
+	return runWatcher(cfg, fHandler)
+}
+
+func fileUploader(cfg replayuploader.Config, fHandler replayuploader.FileHandler) error {
+	files, err := ioutil.ReadDir(cfg.Dir)
+	if err != nil {
+		return err
+	}
+
+	log.Printf("Found %v files from %v", len(files), cfg.Dir)
+
+	for _, f := range files {
+		fHandler.NewFile(f.Name())
+	}
+
+	return nil
+}
+
+func runWatcher(cfg replayuploader.Config, fHandler replayuploader.FileHandler) int {
 	watcher, err := fsnotify.NewWatcher()
 	if err != nil {
 		log.Printf("Error creating watcher: %v", err)
@@ -92,9 +126,9 @@ func run(cfg replayuploader.Config) int {
 	if err != nil {
 		log.Printf("Error watching dir '%v': %v", cfg.Dir, err)
 		return -1
-	} else {
-		log.Printf("Now watching directory: %v", cfg.Dir)
 	}
+	log.Printf("Now watching directory: %v", cfg.Dir)
 	<-done
 	return 0
+
 }
