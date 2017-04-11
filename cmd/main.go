@@ -59,7 +59,7 @@ func run(cfg replayuploader.Config) int {
 		defer fd.Close()
 	}
 	dataFile := replayuploader.StateFile{
-		Status: make(map[string]bool),
+		Status: map[string]bool{},
 	}
 	err = json.NewDecoder(fd).Decode(&dataFile)
 	if err != nil {
