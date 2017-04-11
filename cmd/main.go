@@ -3,13 +3,11 @@ package main
 import (
 	"encoding/json"
 	"flag"
+	"fmt"
+	"io/ioutil"
 	"log"
 	"os"
 	"path/filepath"
-
-	"io/ioutil"
-
-	"fmt"
 
 	"github.com/esiqveland/replayuploader"
 	"github.com/fsnotify/fsnotify"
