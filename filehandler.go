@@ -146,6 +146,7 @@ func (fh *fileHandler) shouldUpload(shaSum string, file *os.File) bool {
 
 	fileName := file.Name()
 	if !strings.Contains(strings.ToLower(fileName), ".sc2replay") {
+		log.Printf("skipping %v, not a sc2replay", fileName)
 		return false
 	}
 
