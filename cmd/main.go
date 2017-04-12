@@ -22,9 +22,9 @@ var versionFlag = flag.Bool("version", false, "Prints version and exits.")
 
 // version is set by goreleaser with an ldflag main.version
 var (
-	version string
-	commit  string
-	date    string
+	version   string
+	commit    string
+	buildTime string
 )
 
 func main() {
@@ -32,7 +32,7 @@ func main() {
 
 	if *versionFlag {
 		fmt.Printf("version: %v-%v\n", version, commit)
-		fmt.Printf("Build date: %v\n", date)
+		fmt.Printf("Build at: %v\n", buildTime)
 		os.Exit(0)
 	}
 

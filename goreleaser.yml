@@ -5,11 +5,17 @@ build:
   main: ./cmd/main.go
 
   # Name of the binary. Default is the name of the project directory.
-  binary_name: sc2uploader
+  binary: sc2uploader
 
-  # Custom ldflags.
-  # Default is `-s -w`
-  ldflags: -s -w
+  # Custom ldflags template.
+  # This is parsed with Golang template engine and the following variables
+  # are available:
+  # - Version
+  # - Date
+  # - Commit
+  # The default is `-s -w -X main.version={{.Version}} -X main.commit={{.Commit}} -X main.date={{.Date}}`
+  # Date format is `RFC3339`
+  ldflags: -s -w -X main.version={{.Version}} -X main.commit={{.Commit}} -X main.buildTime={{.Date}}
 
   # GOOS list to build in.
   # For more info refer to https://golang.org/doc/install/source#environment
