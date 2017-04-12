@@ -21,13 +21,18 @@ var dataFlag = flag.String("data", "state.json", "Filepath to store state betwee
 var versionFlag = flag.Bool("version", false, "Prints version and exits.")
 
 // version is set by goreleaser with an ldflag main.version
-var version = "master"
+var (
+	version string
+	commit  string
+	date    string
+)
 
 func main() {
 	flag.Parse()
 
 	if *versionFlag {
-		fmt.Printf("version: %v\n", version)
+		fmt.Printf("version: %v-%v\n", version, commit)
+		fmt.Printf("Build date: %v\n", date)
 		os.Exit(0)
 	}
 
