@@ -3,3 +3,5 @@ curl_sample.sh
 .idea
 env.sh
 dist
+
+dist/
