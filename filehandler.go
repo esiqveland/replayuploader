@@ -5,6 +5,7 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"io"
 	"log"
 	"os"
@@ -12,6 +13,8 @@ import (
 	"strings"
 	"sync"
 	"time"
+
+	"github.com/icza/s2prot/rep"
 )
 
 // StateFile stores data between runs
@@ -26,8 +29,9 @@ type Config struct {
 	Token string
 	Hash  string
 	// Path to statefile
-	DataFile string
-	MaxTries int
+	DataFile   string
+	MaxTries   int
+	LadderOnly bool
 }
 
 func (c *Config) HasError() error {
@@ -146,12 +150,31 @@ func (fh *fileHandler) shouldUpload(shaSum string, file *os.File) bool {
 
 	fileName := file.Name()
 	if !strings.Contains(strings.ToLower(fileName), ".sc2replay") {
-		log.Printf("skipping %v, not a sc2replay", fileName)
+		log.Printf("skipping %v, not a sc2replay\n", fileName)
 		return false
 	}
 
 	stat, _ := file.Stat()
 	size := stat.Size()
+
+	if size < 2 {
+		return false
+	}
+
+	replay, err := rep.New(file)
+	defer file.Seek(0, 0)
+	if err != nil {
+		fmt.Printf("Failed to parse replay: %v\n", err)
+		return false
+	}
+	defer replay.Close()
+
+	isRankedOrCompetitive := replay.InitData.GameDescription.GameOptions.CompetitiveOrRanked()
+	if fh.config.LadderOnly && !isRankedOrCompetitive {
+		log.Printf("skipping %v: isRankedOrCompetitive=%v\n", fileName, isRankedOrCompetitive)
+		//fh.filesDone[shaSum] = true
+		return false
+	}
 
 	isDone, ok := fh.filesDone[shaSum]
 	if ok && isDone {

@@ -19,6 +19,7 @@ var hashFlag = flag.String("hash", "", "Hash value to use when uploading.")
 var triesFlag = flag.Int("maxtries", 5, "Max number of retries to upload a replay.")
 var dataFlag = flag.String("data", "state.json", "Filepath to store state between runs.")
 var versionFlag = flag.Bool("version", false, "Prints version and exits.")
+var ladderOnlyFlag = flag.Bool("ladderonly", true, "Only upload ladder replay files.")
 
 // version is set by goreleaser with an ldflag main.version
 var (
@@ -37,11 +38,12 @@ func main() {
 	}
 
 	cfg := replayuploader.Config{
-		Dir:      *dirFlag,
-		Token:    *tokenFlag,
-		Hash:     *hashFlag,
-		MaxTries: *triesFlag,
-		DataFile: *dataFlag,
+		Dir:        *dirFlag,
+		Token:      *tokenFlag,
+		Hash:       *hashFlag,
+		MaxTries:   *triesFlag,
+		DataFile:   *dataFlag,
+		LadderOnly: *ladderOnlyFlag,
 	}
 	err := cfg.HasError()
 	if err != nil {
