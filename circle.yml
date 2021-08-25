@@ -1,8 +1,0 @@
-# circle.yml
-deployment:
-  tag:
-    tag: /v[0-9]+(\.[0-9]+)*(-.*)*/
-    owner: esiqveland
-    commands:
-      - go get github.com/goreleaser/goreleaser
-      - goreleaser
