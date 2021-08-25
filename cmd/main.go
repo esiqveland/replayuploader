@@ -23,9 +23,9 @@ var ladderOnlyFlag = flag.Bool("ladderonly", true, "Only upload ladder replay fi
 
 // version is set by goreleaser with an ldflag main.version
 var (
-	version   string
-	commit    string
-	buildTime string
+	version string = "dev"
+	commit  string = "unknown"
+	date    string = ""
 )
 
 func main() {
@@ -33,7 +33,7 @@ func main() {
 
 	if *versionFlag {
 		fmt.Printf("version: %v-%v\n", version, commit)
-		fmt.Printf("Build at: %v\n", buildTime)
+		fmt.Printf("Build at: %v\n", date)
 		os.Exit(0)
 	}
 
