@@ -42,7 +42,7 @@ func (u *uploader) Upload(filename string, content io.Reader) error {
 		return err
 	}
 
-	url := "https://sc2replaystats.com/api/v2/uploadReplay"
+	url := "https://sc2replaystats.com/upload_replay.php"
 
 	req, err := http.NewRequest("POST", url, body)
 	if err != nil {
