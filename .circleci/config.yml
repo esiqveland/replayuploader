@@ -15,7 +15,7 @@ jobs:
   build:
     working_directory: ~/repo
     docker:
-      - image: circleci/golang:1.17
+      - image: circleci/golang:1.24
     steps:
       - checkout
       - restore_cache:
@@ -43,7 +43,7 @@ jobs:
   release:
     working_directory: ~/repo
     docker:
-      - image: circleci/golang:1.17
+      - image: circleci/golang:1.24
     steps:
       - checkout
       - restore_cache:
