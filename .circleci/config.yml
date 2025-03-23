@@ -1,5 +1,5 @@
-# Use the latest 2.1 version of CircleCI pipeline process engine. See: https://circleci.com/docs/2.0/configuration-reference
 version: 2.1
+
 workflows:
   main:
     jobs:
@@ -11,11 +11,12 @@ workflows:
               ignore: /.*/
             tags:
               only: /v[0-9]+(\.[0-9]+)*(-.*)*/
+
 jobs:
   build:
     working_directory: ~/repo
     docker:
-      - image: circleci/golang:1.24
+      - image: cimg/go:1.24
     steps:
       - checkout
       - restore_cache:
@@ -43,7 +44,7 @@ jobs:
   release:
     working_directory: ~/repo
     docker:
-      - image: circleci/golang:1.24
+      - image: cimg/go:1.24
     steps:
       - checkout
       - restore_cache:
